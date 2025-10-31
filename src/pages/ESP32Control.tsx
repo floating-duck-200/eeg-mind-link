@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Cpu, Wifi, WifiOff, Send, ArrowLeft, ArrowRight, Activity } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { getESP32Config, saveESP32Config, sendDirectionToESP32 } from "@/lib/esp32Service";
 
 const ESP32Control = () => {
   const [esp32Address, setEsp32Address] = useState("192.168.1.100");
@@ -17,6 +18,15 @@ const ESP32Control = () => {
     status: "success" | "error";
   }>>([]);
 
+  // Load saved configuration on mount
+  useEffect(() => {
+    const config = getESP32Config();
+    if (config.address) {
+      setEsp32Address(config.address);
+      setIsConnected(config.isConnected);
+    }
+  }, []);
+
   const handleConnect = () => {
     if (!esp32Address) {
       toast.error("Please enter ESP32 IP address");
@@ -24,11 +34,13 @@ const ESP32Control = () => {
     }
     
     setIsConnected(true);
+    saveESP32Config({ address: esp32Address, isConnected: true });
     toast.success(`Connected to ESP32 at ${esp32Address}`);
   };
 
   const handleDisconnect = () => {
     setIsConnected(false);
+    saveESP32Config({ address: esp32Address, isConnected: false });
     toast.info("Disconnected from ESP32");
   };
 
@@ -39,19 +51,17 @@ const ESP32Control = () => {
     }
 
     try {
-      // Placeholder for actual ESP32 communication
-      // In production, this would make an HTTP request to the ESP32
+      const success = await sendDirectionToESP32(direction, { address: esp32Address, isConnected });
+      
       setLastSent(direction);
       setCommandHistory((prev) => [
         {
           direction,
           timestamp: new Date(),
-          status: "success",
+          status: success ? "success" : "error",
         },
         ...prev,
       ]);
-      
-      toast.success(`Direction "${direction}" sent to ESP32`);
     } catch (error) {
       toast.error("Failed to send direction to ESP32");
       setCommandHistory((prev) => [

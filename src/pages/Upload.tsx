@@ -6,6 +6,7 @@ import { Upload as UploadIcon, Brain, AlertCircle, CheckCircle2, ArrowRight, Arr
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { sendDirectionToESP32 } from "@/lib/esp32Service";
 
 const Upload = () => {
   const [dataFile, setDataFile] = useState<File | null>(null);
@@ -47,7 +48,7 @@ const Upload = () => {
 
     // This is a placeholder for the actual processing
     // In production, this would send files to the backend for processing
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       setProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval);
@@ -67,8 +68,11 @@ const Upload = () => {
           setCurrentIndex((prev) => prev + 1);
           setIsProcessing(false);
           
+          // Send prediction to ESP32
+          sendDirectionToESP32(predicted as "L" | "R");
+          
           toast.success(`Prediction complete: ${predicted}`, {
-            description: `Actual: ${actual}`,
+            description: `Actual: ${actual} | Sent to ESP32`,
           });
           
           return 0;
